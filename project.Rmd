@@ -55,9 +55,9 @@ training$classe <- classe
 dim(training)
 
 # correlation between variables 
-library(corrplot)
-corrPlot <- cor(training[, -length(names(training))]) # excluding classe
-corrplot(corrPlot, method="color")
+#library(corrplot)
+#corrPlot <- cor(training[, -length(names(training))]) # excluding classe
+#corrplot(corrPlot, method="color")
 
 testing <- testing[, -toremove]
 testing <- testing[, arenumeric]
