@@ -20,13 +20,13 @@ In this project, the goal will be: to use data from accelerometers on the belt, 
 
 ```{r}
 file1 <- 'https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv'
-if (!file.exists(file1)) {
-  download.file(file1,destfile = '~/Desktop/pml-training.csv')}
+fileout1 <- '~/Desktop/pml-training.csv'
+if (!file.exists(fileout1)) {  download.file(file1,destfile = fileout1)}
 file2 <- 'https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv'
-if (!file.exists(file2)) {
-  download.file(file2,destfile = '~/Desktop/pml-testing.csv')}
-training <- read.csv('~/Desktop/pml-training.csv'); dim(training)
-testing  <- read.csv('~/Desktop/pml-testing.csv'); dim(testing)
+fileout2 <- '~/Desktop/pml-testing.csv' 
+if (!file.exists(fileout2)) {  download.file(file2,destfile = fileout2)}
+training <- read.csv(fileout1); dim(training)
+testing  <- read.csv(fileout2); dim(testing)
 str(training)
 ```
 
@@ -81,9 +81,10 @@ control <- trainControl(method="cv", 5)
 fit.rf <- train(classe ~ ., data=trainset, method="rf", trControl=control)
 fit.rf
 # Plot
+library(rpart); library(rpart.plot)
 rftree <- rpart(classe ~ ., data=trainset, method="class")
 prp(rftree) # fast plot
-library(rattle); fancyRpartPlot(modFit$finalModel)
+# library(rattle); fancyRpartPlot(rftree) # other option for plotting 
 ```
 
 We check the performance of the model on the validation data set.
@@ -91,16 +92,15 @@ We check the performance of the model on the validation data set.
 ```{r}
 pred <- predict(fit.rf, testset)
 CF <- confusionMatrix(testset$classe, pred)
-print("Accuracy: ")
 CF$overall[1]
 print('out of sample error:') 
 1 - as.numeric(confusionMatrix(testset$classe, pred)$overall[1])
 ```
 
-Comparing the model with the original 'testing' data provides a validation of the performance of the prediction (note that we need to get rid of the last column first, 'problem_id')
+Applying the model to the original 'testing' data provides the prediction:
 
 ```{r}
-pred.final <- predict(fit.rf, testing[, -length(names(testing))])
+pred.final <- predict(fit.rf, testing)
 pred.final
 ```
 
