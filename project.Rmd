@@ -1,0 +1,106 @@
+---
+title: "PROJECT MACHINE LEARNING / COURSERA "
+author: "BGR"
+date: "February 7, 2016"
+output: html_document
+---
+
+# Instructions 
+You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases
+
+# Bacground 
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+
+In this project, the goal will be: to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. For more information: 'http://groupware.les.inf.puc-rio.br/har' 
+
+
+## Solution
+
+# 1. Downlaod and load data: 
+
+```{r}
+file1 <- 'https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv'
+if (!file.exists(file1)) {
+  download.file(file1,destfile = '~/Desktop/pml-training.csv')}
+file2 <- 'https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv'
+if (!file.exists(file2)) {
+  download.file(file2,destfile = '~/Desktop/pml-testing.csv')}
+training <- read.csv('~/Desktop/pml-training.csv'); dim(training)
+testing  <- read.csv('~/Desktop/pml-testing.csv'); dim(testing)
+str(training)
+```
+
+The goal of the project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. 
+
+The training dataset include 19622 observations and the testing set 20, for 160 total variables. Many include NA. This requires some pre-processing: 
+
+1. Excluding the columns with all NA reduces the variables to 93. 
+
+```{r}
+indscols <- which(colSums(is.na(training)) == 0 | colSums(is.na(testing)) == 0)
+training <- training[,indscols]
+testing <- testing[,indscols]
+dim(training) 
+dim(testing) 
+```
+2. Excluding columns that do not contribute to the accelerometer 
+
+```{r}
+classe <- training$classe
+toremove <- grepl("^X|timestamp|window", names(training))
+training <- training[, -toremove]
+arenumeric <- sapply(training, is.numeric)
+training <- training[, arenumeric]
+training$classe <- classe
+dim(training)
+
+# correlation between variables 
+library(corrplot)
+corrPlot <- cor(training[, -length(names(training))]) # excluding classe
+corrplot(corrPlot, method="color")
+
+testing <- testing[, -toremove]
+testing <- testing[, arenumeric]
+dim(testing) 
+```
+
+# 2. Training and prediction 
+
+```{r}
+library(caret)
+set.seed(123) # For reproducibile purpose
+inTrain <- createDataPartition(training$classe, p=0.70, list=F)
+trainset <- training[inTrain, ]
+testset  <- training[-inTrain, ]
+```
+
+We fit a random forest predictive model for classe, with 5-fold cross validation. 
+
+```{r}
+control <- trainControl(method="cv", 5)
+fit.rf <- train(classe ~ ., data=trainset, method="rf", trControl=control)
+fit.rf
+# Plot
+rftree <- rpart(classe ~ ., data=trainset, method="class")
+prp(rftree) # fast plot
+library(rattle); fancyRpartPlot(modFit$finalModel)
+```
+
+We check the performance of the model on the validation data set.
+
+```{r}
+pred <- predict(fit.rf, testset)
+CF <- confusionMatrix(testset$classe, pred)
+print("Accuracy: ")
+CF$overall[1]
+print('out of sample error:') 
+1 - as.numeric(confusionMatrix(testset$classe, pred)$overall[1])
+```
+
+Comparing the model with the original 'testing' data provides a validation of the performance of the prediction (note that we need to get rid of the last column first, 'problem_id')
+
+```{r}
+pred.final <- predict(fit.rf, testing[, -length(names(testing))])
+pred.final
+```
+
